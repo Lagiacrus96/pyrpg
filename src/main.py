@@ -20,11 +20,12 @@ SCALE_TILESIZE = TILESIZE * SCALE_FACTOR
 GRID_WIDTH = screen.get_width() // SCALE_TILESIZE
 GRID_HEIGHT = screen.get_height() // SCALE_TILESIZE
 
-# Battle UI settings
+# Battle settings
 battleui_height = 300
 battleui_y = screen_height - battleui_height
 selected_option = 0 # 0, 1, 2, 3 are attack, ability, item, flee
 battleui_colour = (0, 0, 0)
+battle = None
 
 # Movement timing
 move_delay = 125
@@ -134,30 +135,36 @@ class BattleSystem:
 
     def perform_turn(self):
         if self.is_player_turn:
-            print("Player's turn!")
             self.player_turn()
         else:
+            print("Enemy's turn") #TODO
             self.enemy_turn()
 
         self.check_end_conditions()
     
     def player_turn(self):
-        while self.current_action == None:
-            print("waiting for action")
-            pass
+        
+        if self.current_action == None:
+            #print("waiting for action")
+            return
+        
 
         if self.current_action == "attack":
-            print("You attacked!")
+            print("You attacked!") #TODO
             player_damage = 1
             self.enemy.health -= player_damage
-
+            
         else:
             pass
 
         self.current_action = None
+        self.is_player_turn = False
+        print(self.is_player_turn)
 
     def enemy_turn(self):
         self.enemy_attack()
+
+        self.is_player_turn = True
 
     def calculate_enemy_damage(self):
         base_damage = 1
@@ -166,6 +173,13 @@ class BattleSystem:
     def enemy_attack(self):
         damage = self.calculate_enemy_damage()
         self.player.health -= damage
+    
+    def check_end_conditions(self):
+        if self.player.health == 0:
+            print("you lost")
+        elif self.enemy.health == 0:
+            print("You win!")
+        
 
 # Player settings
 start_pos = [GRID_WIDTH // 2, GRID_HEIGHT // 2] # Starting position in grid terms
@@ -278,7 +292,7 @@ def battle_state():
     enemy1.draw(screen)
     battle_UI(player, enemy1)
 
-    if enemy1.health == 0:
+    if enemy1.health == 0: #TODO remove this probably, it's going elsewhere
         # After Combat
         print("Combat Finished!!")
         player.pos = remember_pos
@@ -347,15 +361,19 @@ while running:
         if GAME_STATE == STATE_EXPLORE:
                 explore_event_handling(event)
         elif GAME_STATE == STATE_BATTLE:
-                battle = BattleSystem(player, enemy1)
+                if battle is None:
+                    battle = BattleSystem(player, enemy1)
+
                 battle_event_handling(event, battle)
                 
 
     if GAME_STATE == STATE_EXPLORE:
+        battle_system = None
         explore_state()
 
     elif GAME_STATE == STATE_BATTLE:
         battle_state()
+     #   if battle.is_player_turn == True:
         battle.perform_turn()
         
     # Update game
