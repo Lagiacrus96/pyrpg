@@ -1,4 +1,5 @@
 import pygame
+import random
 
 pygame.init()
 
@@ -28,8 +29,11 @@ battleui_colour = (0, 0, 0)
 battle = None
 
 # Movement timing
-move_delay = 125
+move_delay = 300
 last_move_time = pygame.time.get_ticks()
+battle_delay = 2000
+last_battle_time = pygame.time.get_ticks()
+
 
 # Default movement states
 w_pressed, a_pressed, s_pressed, d_pressed = False, False, False, False
@@ -146,14 +150,20 @@ class BattleSystem:
         The method that determines what happens when a player chooses to attack.
         """
         print("You attacked!") #TODO
-        player_damage = 1
+        crit_chance = 10
+        roll = random.randint(1,100)
+        if roll <= crit_chance:
+            print("You did a critical hit!")
+            player_damage = 2
+        else:
+            player_damage = 1
         self.enemy.health -= player_damage
 
     def player_ability(self):
         """
         The method that determines what happens when a player chooses an ability.
         """
-        print("You did a critial hit!") #TODO
+        print("You used all your strength!") #TODO
         player_damage = 2
         self.enemy.health -= player_damage
 
@@ -190,7 +200,7 @@ class BattleSystem:
             pygame.time.delay(1000)
 
         elif self.current_action == "item":
-            self.player_heal()
+            self.player_item()
             pygame.time.delay(1000)
 
         elif self.current_action == "flee":
@@ -203,18 +213,20 @@ class BattleSystem:
 
     def enemy_turn(self):
         self.enemy_attack()
-
+        pygame.time.delay(1000)
         self.is_player_turn = True
 
-    def calculate_enemy_damage(self):
-        base_damage = 1
-        return base_damage
     
     def enemy_attack(self):
-        enemy_damage = self.calculate_enemy_damage()
-        self.player.health -= enemy_damage
         print("The enemy attacked!") #TODO
-        pygame.time.delay(1000)
+        crit_chance = 5
+        roll = random.randint(1,100)
+        if roll <= crit_chance:
+            print("The enemy critically hit you!")
+            enemy_damage = 2
+        else:
+            enemy_damage = 1
+        self.player.health -= enemy_damage
     
     def check_end_conditions(self):
         global GAME_STATE
@@ -231,7 +243,7 @@ class BattleSystem:
 # Player settings
 start_pos = [GRID_WIDTH // 2, GRID_HEIGHT // 2] # Starting position in grid terms
 player = Character(start_pos[0], start_pos[1], 9, [0, 0, 255])
-enemy1 = Enemy(4 * GRID_WIDTH // 5, GRID_HEIGHT // 2, 3, [255, 0, 0])
+enemy1 = Enemy(4 * GRID_WIDTH // 5, GRID_HEIGHT // 3, 3, [255, 0, 0])
 
 def global_event_handling(event):
     """
@@ -328,7 +340,7 @@ def battle_state():
     global player, enemy1, GAME_STATE
     screen.fill((20, 0, 0))
 
-    player.pos = [GRID_WIDTH // 5, GRID_HEIGHT // 2]
+    player.pos = [GRID_WIDTH // 5, GRID_HEIGHT // 3]
 
     player.draw(screen)
     enemy1.draw(screen)
