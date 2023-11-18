@@ -31,8 +31,8 @@ battle = None
 # Movement timing
 move_delay = 300
 last_move_time = pygame.time.get_ticks()
-battle_delay = 2000
-last_battle_time = pygame.time.get_ticks()
+battle_delay = 500
+#last_battle_time = pygame.time.get_ticks()
 
 
 # Default movement states
@@ -85,7 +85,7 @@ class Character(GameEntity):
 
     Additional behaviors or methods specific to Character can be described here.
     """
-    def __init__(self, xpos, ypos, health, colour):
+    def __init__(self, xpos, ypos, base_health, colour):
         """
         Initializes a new Character instance, inheriting from GameEntity.
 
@@ -95,7 +95,7 @@ class Character(GameEntity):
             health (int): The initial health of the character.
             colour (tuple): The RGB color of the character.
         """
-        super().__init__(xpos, ypos, health, colour)
+        super().__init__(xpos, ypos, base_health, colour)
 
 
 class Enemy(GameEntity):
@@ -138,10 +138,15 @@ class BattleSystem:
         self.current_action = None
 
     def perform_turn(self):
+        global last_move_time, current_time
         if self.is_player_turn:
-            self.player_turn()
+            if current_time - last_move_time > battle_delay:
+                self.player_turn()
+                last_move_time = current_time
         else:
-            self.enemy_turn()
+            if current_time - last_move_time > battle_delay:
+                self.enemy_turn()
+                last_move_time = current_time
 
         self.check_end_conditions()
 
@@ -183,7 +188,6 @@ class BattleSystem:
         print("You fled!") #TODO
         player.pos = remember_pos
         GAME_STATE = STATE_EXPLORE
-        battle = None
     
     def player_turn(self):
         global GAME_STATE, battle
@@ -193,19 +197,15 @@ class BattleSystem:
         
         if self.current_action == "attack":
             self.player_attack()
-            pygame.time.delay(1000) 
 
         elif self.current_action == "ability":
             self.player_ability()
-            pygame.time.delay(1000)
 
         elif self.current_action == "item":
             self.player_item()
-            pygame.time.delay(1000)
 
         elif self.current_action == "flee":
             self.player_flee()
-            pygame.time.delay(1000)
 
         self.current_action = None
         self.is_player_turn = False
@@ -213,7 +213,6 @@ class BattleSystem:
 
     def enemy_turn(self):
         self.enemy_attack()
-        pygame.time.delay(1000)
         self.is_player_turn = True
 
     
