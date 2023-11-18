@@ -1,4 +1,5 @@
 import pygame
+import random
 
 pygame.init()
 
@@ -28,8 +29,11 @@ battleui_colour = (0, 0, 0)
 battle = None
 
 # Movement timing
-move_delay = 125
+move_delay = 300
 last_move_time = pygame.time.get_ticks()
+battle_delay = 500
+#last_battle_time = pygame.time.get_ticks()
+
 
 # Default movement states
 w_pressed, a_pressed, s_pressed, d_pressed = False, False, False, False
@@ -81,7 +85,7 @@ class Character(GameEntity):
 
     Additional behaviors or methods specific to Character can be described here.
     """
-    def __init__(self, xpos, ypos, health, colour):
+    def __init__(self, xpos, ypos, base_health, colour):
         """
         Initializes a new Character instance, inheriting from GameEntity.
 
@@ -91,7 +95,7 @@ class Character(GameEntity):
             health (int): The initial health of the character.
             colour (tuple): The RGB color of the character.
         """
-        super().__init__(xpos, ypos, health, colour)
+        super().__init__(xpos, ypos, base_health, colour)
 
 
 class Enemy(GameEntity):
@@ -134,57 +138,111 @@ class BattleSystem:
         self.current_action = None
 
     def perform_turn(self):
+        global last_move_time, current_time
         if self.is_player_turn:
-            self.player_turn()
+            if current_time - last_move_time > battle_delay:
+                self.player_turn()
+                last_move_time = current_time
         else:
-            print("Enemy's turn") #TODO
-            self.enemy_turn()
+            if current_time - last_move_time > battle_delay:
+                self.enemy_turn()
+                last_move_time = current_time
 
         self.check_end_conditions()
+
+    def player_attack(self):
+        """
+        The method that determines what happens when a player chooses to attack.
+        """
+        print("You attacked!") #TODO
+        crit_chance = 10
+        roll = random.randint(1,100)
+        if roll <= crit_chance:
+            print("You did a critical hit!")
+            player_damage = 2
+        else:
+            player_damage = 1
+        self.enemy.health -= player_damage
+
+    def player_ability(self):
+        """
+        The method that determines what happens when a player chooses an ability.
+        """
+        print("You used all your strength!") #TODO
+        player_damage = 2
+        self.enemy.health -= player_damage
+
+    def player_item(self):
+        """
+        The method that determines what happens when a player chooses an item.
+        """
+        print("You healed!") #TODO
+        self.player.health += 3
+
+
+    def player_flee(self):
+        global battle, GAME_STATE
+        """
+        The method that determines what happens when a player chooses to flee.
+        """
+        print("You fled!") #TODO
+        player.pos = remember_pos
+        GAME_STATE = STATE_EXPLORE
     
     def player_turn(self):
+        global GAME_STATE, battle
         
         if self.current_action == None:
-            #print("waiting for action")
             return
         
-
         if self.current_action == "attack":
-            print("You attacked!") #TODO
-            player_damage = 1
-            self.enemy.health -= player_damage
-            
-        else:
-            pass
+            self.player_attack()
+
+        elif self.current_action == "ability":
+            self.player_ability()
+
+        elif self.current_action == "item":
+            self.player_item()
+
+        elif self.current_action == "flee":
+            self.player_flee()
 
         self.current_action = None
         self.is_player_turn = False
-        print(self.is_player_turn)
+
 
     def enemy_turn(self):
         self.enemy_attack()
-
         self.is_player_turn = True
 
-    def calculate_enemy_damage(self):
-        base_damage = 1
-        return base_damage
     
     def enemy_attack(self):
-        damage = self.calculate_enemy_damage()
-        self.player.health -= damage
+        print("The enemy attacked!") #TODO
+        crit_chance = 5
+        roll = random.randint(1,100)
+        if roll <= crit_chance:
+            print("The enemy critically hit you!")
+            enemy_damage = 2
+        else:
+            enemy_damage = 1
+        self.player.health -= enemy_damage
     
     def check_end_conditions(self):
-        if self.player.health == 0:
+        global GAME_STATE
+        if self.player.health <= 0:
             print("you lost")
-        elif self.enemy.health == 0:
+        elif self.enemy.health <= 0:
             print("You win!")
+        else:
+            return
+        print("Combat is finished!")
+        player.pos = remember_pos
+        GAME_STATE = STATE_EXPLORE
         
-
 # Player settings
 start_pos = [GRID_WIDTH // 2, GRID_HEIGHT // 2] # Starting position in grid terms
 player = Character(start_pos[0], start_pos[1], 9, [0, 0, 255])
-enemy1 = Enemy(4 * GRID_WIDTH // 5, GRID_HEIGHT // 2, 3, [255, 0, 0])
+enemy1 = Enemy(4 * GRID_WIDTH // 5, GRID_HEIGHT // 3, 3, [255, 0, 0])
 
 def global_event_handling(event):
     """
@@ -228,8 +286,6 @@ def explore_event_handling(event):
             GAME_STATE = STATE_BATTLE
             print(GAME_STATE)
         
-        
-    
     if event.type == pygame.KEYUP:
         # Movement handling
         if event.key == pygame.K_a or event.key == pygame.K_LEFT:
@@ -243,7 +299,6 @@ def explore_event_handling(event):
 
 def battle_event_handling(event, battle_system):
     global selected_option, running, GAME_STATE, current_time, a_pressed, d_pressed, w_pressed, s_pressed, player, enemy1, remember_pos
-
 
     # Menu event handling
     menu_options = {
@@ -259,8 +314,6 @@ def battle_event_handling(event, battle_system):
             selected_option = (selected_option + 1) % 4
         elif event.key == pygame.K_RETURN:
             battle_system.current_action = menu_options[selected_option]
-            print (battle_system.current_action)
-
 
 def explore_state():
     global last_move_time, player, current_time
@@ -286,20 +339,12 @@ def battle_state():
     global player, enemy1, GAME_STATE
     screen.fill((20, 0, 0))
 
-    player.pos = [GRID_WIDTH // 5, GRID_HEIGHT // 2]
+    player.pos = [GRID_WIDTH // 5, GRID_HEIGHT // 3]
 
     player.draw(screen)
     enemy1.draw(screen)
     battle_UI(player, enemy1)
 
-    if enemy1.health == 0: #TODO remove this probably, it's going elsewhere
-        # After Combat
-        print("Combat Finished!!")
-        player.pos = remember_pos
-        GAME_STATE = STATE_EXPLORE
-
-
-    
 def battle_UI(player, enemy, colour = (255, 255, 255)):
     global selected_option
     font = pygame.font.Font(None, 65)
@@ -324,9 +369,6 @@ def battle_UI(player, enemy, colour = (255, 255, 255)):
     item_rect = battle_item.get_rect(center = (screen_width // 2, screen_height * 6 // 7 + 30))
     flee_rect = battle_flee.get_rect(center = (screen_width // 2, screen_height * 6 // 7 + 90))
 
-
-    #screen.fill((0, 0, 0))
-
     # Highlight selected option
     if selected_option == 0:
         pygame.draw.rect(screen, (0, 0, 255), attack_rect)
@@ -337,7 +379,6 @@ def battle_UI(player, enemy, colour = (255, 255, 255)):
     elif selected_option == 3:
         pygame.draw.rect(screen, (0, 0, 255), flee_rect)
     
-
     # Display text
     screen.blit(player_health_text, player_health_rect)
     screen.blit(enemy_health_text, enemy_health_rect)
@@ -346,9 +387,7 @@ def battle_UI(player, enemy, colour = (255, 255, 255)):
     screen.blit(battle_item, item_rect)
     screen.blit(battle_flee, flee_rect)
 
-        
     pygame.display.flip()
-
 
 # Game loop
 running = True
@@ -366,14 +405,12 @@ while running:
 
                 battle_event_handling(event, battle)
                 
-
     if GAME_STATE == STATE_EXPLORE:
-        battle_system = None
+        battle = None
         explore_state()
 
     elif GAME_STATE == STATE_BATTLE:
         battle_state()
-     #   if battle.is_player_turn == True:
         battle.perform_turn()
         
     # Update game
