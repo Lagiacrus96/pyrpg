@@ -38,26 +38,94 @@ STATE_EXPLORE = "exploration"
 STATE_BATTLE = "battle"
 GAME_STATE = STATE_EXPLORE
 
-# Create a class for all entities, for player and enemies to inherit
 class GameEntity:
+    """
+    A base class for all player characters and enemies in the game.
+
+    Attributes:
+        pos (list of int): X and Y grid coordinates for the entity's position on the map.
+        health (int): The health of the entity. Represents the entity's vitality.
+        colour (tuple): The RGB color of the entity, used for rendering.
+
+    Methods:
+        draw(surface): Draws the entity on the specified surface as a rectangle.
+    """
     def __init__(self, xpos, ypos, health, colour):
+        """
+        Initializes a new GameEntity instance.
+
+        Args:
+            xpos (int): The X-coordinate of the entity on the grid.
+            ypos (int): The Y-coordinate of the entity on the grid.
+            health (int): The initial health of the entity.
+            colour (tuple): The RGB color of the entity.
+        """
         self.pos = [xpos, ypos]
         self.health = health
         self.colour = colour
 
     def draw(self, surface):
-        pygame.draw.rect(surface, self.colour, (self.pos[0] * SCALE_TILESIZE, self.pos[1]* SCALE_TILESIZE, SCALE_TILESIZE, SCALE_TILESIZE))
+        """
+        Draws the entity as a rectangle onto the given surface.
+
+        Args:
+            surface (pygame.Surface): The surface on which to draw the entity.
+        """
+        pygame.draw.rect(surface, self.colour, (self.pos[0] * SCALE_TILESIZE, self.pos[1] * SCALE_TILESIZE, SCALE_TILESIZE, SCALE_TILESIZE))
 
 class Character(GameEntity):
+    """
+    A class for player-controlled characters in the game. Inherits attributes and 
+    methods from GameEntity.
+
+    Additional behaviors or methods specific to Character can be described here.
+    """
     def __init__(self, xpos, ypos, health, colour):
+        """
+        Initializes a new Character instance, inheriting from GameEntity.
+
+        Args:
+            xpos (int): The X-coordinate of the character on the grid.
+            ypos (int): The Y-coordinate of the character on the grid.
+            health (int): The initial health of the character.
+            colour (tuple): The RGB color of the character.
+        """
         super().__init__(xpos, ypos, health, colour)
 
 
 class Enemy(GameEntity):
+    """
+    A class for enemies in the game. Inherits attributes and methods from GameEntity.
+
+    Additional details about Enemy-specific behaviors or methods can be added here.
+    """
     def __init__(self, xpos, ypos, health, colour):
+        """
+        Initializes a new Enemy instance, inheriting from GameEntity.
+
+        Args:
+            xpos (int): The X-coordinate of the enemy on the grid.
+            ypos (int): The Y-coordinate of the enemy on the grid.
+            health (int): The initial health of the enemy.
+            colour (tuple): The RGB color of the enemy.
+        """
         super().__init__(xpos, ypos, health, colour)
 
 class BattleSystem:
+    """
+    A class for configuring and activating battles
+
+    Attributes:
+        player (GameEntity):
+        enemy (GameEntity):
+    
+    Methods:
+        perform_turn:
+        player_turn:
+        enemy_turn:
+        calculate_enemy_damage:
+        enemy_attack:
+    """
     def __init__(self, player, enemy):
         self.player = player
         self.enemy = enemy
@@ -98,26 +166,19 @@ class BattleSystem:
     def enemy_attack(self):
         damage = self.calculate_enemy_damage()
         self.player.health -= damage
-'''
-TODO
-    def menu_ability(self):
-        pass
 
-    def menu_item(self):
-        pass
-
-    def menu_flee(self):
-        global player, remember_pos
-        global GAME_STATE
-        player.pos = remember_pos
-        GAME_STATE = STATE_EXPLORE
-'''
 # Player settings
 start_pos = [GRID_WIDTH // 2, GRID_HEIGHT // 2] # Starting position in grid terms
 player = Character(start_pos[0], start_pos[1], 9, [0, 0, 255])
 enemy1 = Enemy(4 * GRID_WIDTH // 5, GRID_HEIGHT // 2, 3, [255, 0, 0])
 
 def global_event_handling(event):
+    """
+    A function to handle the events that can occur both inside and outside of battles
+
+    Args:
+        event (?):
+    """
     global running
     if event.type == pygame.QUIT:
         running = False
@@ -127,6 +188,12 @@ def global_event_handling(event):
             running = False
 
 def explore_event_handling(event):
+    """
+    A function to handle specifically the events that only occur whilst not in battle.
+
+    Args:
+        event (?):
+    """
     global running, GAME_STATE, current_time, a_pressed, d_pressed, w_pressed, s_pressed, player, enemy1, remember_pos
 
     # Movement handling
