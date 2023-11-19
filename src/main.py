@@ -55,7 +55,7 @@ class GameEntity:
     Methods:
         draw(surface): Draws the entity on the specified surface as a rectangle.
     """
-    def __init__(self, xpos, ypos, health, colour):
+    def __init__(self, xpos, ypos, max_health, colour):
         """
         Initializes a new GameEntity instance.
 
@@ -66,8 +66,10 @@ class GameEntity:
             colour (tuple): The RGB color of the entity.
         """
         self.pos = [xpos, ypos]
-        self.health = health
+        self.max_health = max_health
+        self.current_health = max_health
         self.colour = colour
+
 
     def draw(self, surface):
         """
@@ -85,7 +87,7 @@ class Character(GameEntity):
 
     Additional behaviors or methods specific to Character can be described here.
     """
-    def __init__(self, xpos, ypos, base_health, colour):
+    def __init__(self, xpos, ypos, max_health, starting_level, experience, colour):
         """
         Initializes a new Character instance, inheriting from GameEntity.
 
@@ -95,7 +97,8 @@ class Character(GameEntity):
             health (int): The initial health of the character.
             colour (tuple): The RGB color of the character.
         """
-        super().__init__(xpos, ypos, base_health, colour)
+        self.experience = experience
+        super().__init__(xpos, ypos, max_health, colour)
 
 
 class Enemy(GameEntity):
@@ -104,7 +107,7 @@ class Enemy(GameEntity):
 
     Additional details about Enemy-specific behaviors or methods can be added here.
     """
-    def __init__(self, xpos, ypos, health, colour):
+    def __init__(self, xpos, ypos, max_health, colour):
         """
         Initializes a new Enemy instance, inheriting from GameEntity.
 
@@ -114,7 +117,7 @@ class Enemy(GameEntity):
             health (int): The initial health of the enemy.
             colour (tuple): The RGB color of the enemy.
         """
-        super().__init__(xpos, ypos, health, colour)
+        super().__init__(xpos, ypos, max_health, colour)
 
 class BattleSystem:
     """
@@ -162,7 +165,7 @@ class BattleSystem:
             player_damage = 2
         else:
             player_damage = 1
-        self.enemy.health -= player_damage
+        self.enemy.current_health -= player_damage
 
     def player_ability(self):
         """
@@ -170,14 +173,14 @@ class BattleSystem:
         """
         print("You used all your strength!") #TODO
         player_damage = 2
-        self.enemy.health -= player_damage
+        self.enemy.current_health -= player_damage
 
     def player_item(self):
         """
         The method that determines what happens when a player chooses an item.
         """
         print("You healed!") #TODO
-        self.player.health += 3
+        self.player.current_health += 3
 
 
     def player_flee(self):
@@ -225,13 +228,14 @@ class BattleSystem:
             enemy_damage = 2
         else:
             enemy_damage = 1
-        self.player.health -= enemy_damage
+        self.player.current_health -= enemy_damage
+        print(self.player.max_health)
     
     def check_end_conditions(self):
         global GAME_STATE
-        if self.player.health <= 0:
+        if self.player.current_health <= 0:
             print("you lost")
-        elif self.enemy.health <= 0:
+        elif self.enemy.current_health <= 0:
             print("You win!")
         else:
             return
@@ -241,7 +245,7 @@ class BattleSystem:
         
 # Player settings
 start_pos = [GRID_WIDTH // 2, GRID_HEIGHT // 2] # Starting position in grid terms
-player = Character(start_pos[0], start_pos[1], 9, [0, 0, 255])
+player = Character(start_pos[0], start_pos[1], 9, 1, 0, [0, 0, 255])
 enemy1 = Enemy(4 * GRID_WIDTH // 5, GRID_HEIGHT // 3, 3, [255, 0, 0])
 
 def global_event_handling(event):
@@ -353,10 +357,10 @@ def battle_UI(player, enemy, colour = (255, 255, 255)):
     pygame.draw.rect(screen, battleui_colour, (0, battleui_y, screen_width, battleui_height))
 
     # Player stats text
-    player_health_text = font.render("Player health: " + str(player.health), True, colour)
+    player_health_text = font.render("Player health: " + str(player.current_health), True, colour)
     player_health_rect = player_health_text.get_rect(center = (screen_width * 1 // 5, screen_height * 6 // 7))
     # Enemy stats text
-    enemy_health_text = font.render("Enemy health: " + str(enemy.health), True, colour)
+    enemy_health_text = font.render("Enemy health: " + str(enemy.current_health), True, colour)
     enemy_health_rect = enemy_health_text.get_rect(center = (screen_width * 4 // 5, screen_height *6 // 7))
 
     battle_attack = font.render("Attack", True, (255, 255, 255))
