@@ -42,6 +42,7 @@ w_pressed, a_pressed, s_pressed, d_pressed = False, False, False, False
 STATE_EXPLORE = "exploration"
 STATE_BATTLE = "battle"
 GAME_STATE = STATE_EXPLORE
+player_inventory = {"gold": 0}
 
 class GameEntity:
     """
