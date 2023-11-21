@@ -25,8 +25,6 @@ GRID_HEIGHT = screen.get_height() // SCALE_TILESIZE
 battleui_height = 300
 battleui_y = screen_height - battleui_height
 selected_option = 0 # 0, 1, 2, 3 are attack, ability, item, flee
-battleui_colour = (0, 0, 0)
-battle = None
 
 # Movement timing
 move_delay = 300
@@ -190,8 +188,7 @@ class BattleSystem:
         The method that determines what happens when a player chooses to flee.
         """
         print("You fled!") #TODO
-        player.pos = remember_pos
-        GAME_STATE = STATE_EXPLORE
+        battle_end()
     
     def player_turn(self):
         global GAME_STATE, battle
@@ -230,7 +227,6 @@ class BattleSystem:
         else:
             enemy_damage = 1
         self.player.current_health -= enemy_damage
-        print(self.player.max_health)
     
     def check_end_conditions(self):
         global GAME_STATE
@@ -240,14 +236,69 @@ class BattleSystem:
             print("You win!")
         else:
             return
-        print("Combat is finished!")
-        player.pos = remember_pos
-        GAME_STATE = STATE_EXPLORE
+        battle_end()
         
+class BattleUI:
+    global screen
+    """
+    A class for creating and updating the UI within battles
+
+    Attributes:
+        player (GameEntity):
+        enemy (GameEntity)
+        screen (TODO):
+    
+    Methods:
+        TODO
+    """
+    def __init__(self, player, enemy, screen, font = pygame.font.Font(None, 65)):
+        self.player = player
+        self.enemy = enemy
+        self.screen = screen
+        self.font = font
+    
+    def draw_background(self):
+        pygame.draw.rect(screen, (0, 0, 0), (0, battleui_y, screen_width, battleui_height))
+        pygame.draw.rect(screen, (40, 0, 0), (0, 0, screen_width, battleui_y))
+    
+    def draw_player_stats(self):
+        player_health_text = self.font.render("Player health: " + str(player.current_health), True, (255, 255, 255))
+        player_health_rect = player_health_text.get_rect(center = (screen_width * 1 // 5, screen_height * 6 // 7))
+        screen.blit(player_health_text, player_health_rect)
+    
+    def draw_enemy_stats(self):
+        enemy_health_text = self.font.render("Enemy health: " + str(self.enemy.current_health), True, (255, 255, 255))
+        enemy_health_rect = enemy_health_text.get_rect(center = (screen_width * 4 // 5, screen_height *6 // 7))
+        screen.blit(enemy_health_text, enemy_health_rect)
+
+    def draw_battle_menu(self):
+        battle_attack = self.font.render("Attack", True, (255, 255, 255))
+        attack_rect = battle_attack.get_rect(center = (screen_width // 2, screen_height * 6// 7 - 90))
+        if selected_option == 0:
+            pygame.draw.rect(screen, (0, 0, 255), attack_rect)
+        screen.blit(battle_attack, attack_rect)
+
+        battle_ability = self.font.render("Ability", True, (255, 255, 255))
+        ability_rect = battle_ability.get_rect(center = (screen_width // 2, screen_height * 6// 7 - 30))
+        if selected_option == 1:
+            pygame.draw.rect(screen, (0, 0, 255), ability_rect)
+        screen.blit(battle_ability, ability_rect)
+
+        battle_item = self.font.render("Item", True, (255, 255, 255))
+        item_rect = battle_item.get_rect(center = (screen_width // 2, screen_height * 6 // 7 + 30))
+        if selected_option == 2:
+            pygame.draw.rect(screen, (0, 0, 255), item_rect)
+        screen.blit(battle_item, item_rect)
+
+        battle_flee = self.font.render("Flee", True, (255, 255, 255))
+        flee_rect = battle_flee.get_rect(center = (screen_width // 2, screen_height * 6 // 7 + 90))
+        if selected_option == 3:
+            pygame.draw.rect(screen, (0, 0, 255), flee_rect)
+        screen.blit(battle_flee, flee_rect)
+
 # Player settings
 start_pos = [GRID_WIDTH // 2, GRID_HEIGHT // 2] # Starting position in grid terms
 player = Character(start_pos[0], start_pos[1], 9, 1, 0, [0, 0, 255])
-enemy1 = Enemy(4 * GRID_WIDTH // 5, GRID_HEIGHT // 3, 3, [255, 0, 0])
 
 def global_event_handling(event):
     """
@@ -264,6 +315,16 @@ def global_event_handling(event):
         if event.key == pygame.K_ESCAPE:
             running = False
 
+def encounter():
+        global GAME_STATE, enemy1, battle, player, remember_pos, battle_ui, screen
+        remember_pos = player.pos
+        player.pos = [GRID_WIDTH // 5, GRID_HEIGHT // 3]
+        enemy1 = Enemy(4 * GRID_WIDTH // 5, GRID_HEIGHT // 3, 3, [255, 0, 0])
+        battle = BattleSystem(player, enemy1)
+        battle_ui = BattleUI(player, enemy1, screen)
+        GAME_STATE = STATE_BATTLE
+
+
 def explore_event_handling(event):
     """
     A function to handle specifically the events that only occur whilst not in battle.
@@ -271,7 +332,8 @@ def explore_event_handling(event):
     Args:
         event (?):
     """
-    global running, GAME_STATE, current_time, a_pressed, d_pressed, w_pressed, s_pressed, player, enemy1, remember_pos
+    global running, GAME_STATE, current_time, a_pressed, d_pressed, w_pressed, s_pressed, player, enemy1
+
 
     # Movement handling
     if event.type == pygame.KEYDOWN:
@@ -283,13 +345,6 @@ def explore_event_handling(event):
             w_pressed = True
         if event.key == pygame.K_s or event.key == pygame.K_DOWN:
             s_pressed = True
-
-        # Temporary battle initiation key    
-        if event.key == pygame.K_b:
-            remember_pos = player.pos
-            enemy1.health = 3
-            GAME_STATE = STATE_BATTLE
-            print(GAME_STATE)
         
     if event.type == pygame.KEYUP:
         # Movement handling
@@ -303,7 +358,7 @@ def explore_event_handling(event):
             s_pressed = False
 
 def battle_event_handling(event, battle_system):
-    global selected_option, running, GAME_STATE, current_time, a_pressed, d_pressed, w_pressed, s_pressed, player, enemy1, remember_pos
+    global selected_option, running, GAME_STATE, current_time, a_pressed, d_pressed, w_pressed, s_pressed, player, enemy1
 
     # Menu event handling
     menu_options = {
@@ -322,15 +377,28 @@ def battle_event_handling(event, battle_system):
 
 def explore_state():
     global last_move_time, player, current_time
+    encounter_occur = random.randint(1, 100)
+
     if current_time - last_move_time > move_delay:
         if w_pressed and player.pos[1] > 0:
             player.pos[1] -= 1
+            if encounter_occur >= 90:
+                encounter()
+
         if s_pressed and player.pos[1] < GRID_HEIGHT - 1:
             player.pos[1] += 1
+            if encounter_occur >= 90:
+                encounter()
+
         if a_pressed and player.pos[0] > 0:
             player.pos[0] -= 1
+            if encounter_occur >= 90:
+                encounter()
+
         if d_pressed and player.pos[0] < GRID_WIDTH - 1:
             player.pos[0] += 1
+            if encounter_occur >= 90:
+                encounter()        
 
         last_move_time = current_time
 
@@ -341,58 +409,31 @@ def explore_state():
     player.draw(screen)
 
 def battle_state():
-    global player, enemy1, GAME_STATE
-    screen.fill((20, 0, 0))
+    global player, GAME_STATE, remember_pos, battle_ui
 
-    player.pos = [GRID_WIDTH // 5, GRID_HEIGHT // 3]
-
+    battle_ui.draw_background()
     player.draw(screen)
     enemy1.draw(screen)
-    battle_UI(player, enemy1)
+    battle_ui.draw_player_stats()
+    battle_ui.draw_enemy_stats()
+    battle_ui.draw_battle_menu()
 
-def battle_UI(player, enemy, colour = (255, 255, 255)):
-    global selected_option
-    font = pygame.font.Font(None, 65)
+def reset_movement_states():
+    global w_pressed, a_pressed, s_pressed, d_pressed
+    w_pressed, a_pressed, s_pressed, d_pressed = False, False, False, False
 
-    # UI background
-    pygame.draw.rect(screen, battleui_colour, (0, battleui_y, screen_width, battleui_height))
+def battle_end():
+    global GAME_STATE, battle, enemy1, encounter_occur, player, remember_pos
+    print("Combat is finished!")
+    player.pos = remember_pos
+    reset_movement_states()
+    GAME_STATE = STATE_EXPLORE
+    battle = None
+    enemy1 = None
+    encounter_occur = 0
 
-    # Player stats text
-    player_health_text = font.render("Player health: " + str(player.current_health), True, colour)
-    player_health_rect = player_health_text.get_rect(center = (screen_width * 1 // 5, screen_height * 6 // 7))
-    # Enemy stats text
-    enemy_health_text = font.render("Enemy health: " + str(enemy.current_health), True, colour)
-    enemy_health_rect = enemy_health_text.get_rect(center = (screen_width * 4 // 5, screen_height *6 // 7))
 
-    battle_attack = font.render("Attack", True, (255, 255, 255))
-    battle_ability = font.render("Ability", True, (255, 255, 255))
-    battle_item = font.render("Item", True, (255, 255, 255))
-    battle_flee = font.render("Flee", True, (255, 255, 255))
 
-    attack_rect = battle_attack.get_rect(center = (screen_width // 2, screen_height * 6// 7 - 90))
-    ability_rect = battle_ability.get_rect(center = (screen_width // 2, screen_height * 6// 7 - 30))
-    item_rect = battle_item.get_rect(center = (screen_width // 2, screen_height * 6 // 7 + 30))
-    flee_rect = battle_flee.get_rect(center = (screen_width // 2, screen_height * 6 // 7 + 90))
-
-    # Highlight selected option
-    if selected_option == 0:
-        pygame.draw.rect(screen, (0, 0, 255), attack_rect)
-    elif selected_option == 1:
-        pygame.draw.rect(screen, (0, 0, 255), ability_rect)
-    elif selected_option == 2:
-        pygame.draw.rect(screen, (0, 0, 255), item_rect)
-    elif selected_option == 3:
-        pygame.draw.rect(screen, (0, 0, 255), flee_rect)
-    
-    # Display text
-    screen.blit(player_health_text, player_health_rect)
-    screen.blit(enemy_health_text, enemy_health_rect)
-    screen.blit(battle_attack, attack_rect)
-    screen.blit(battle_ability, ability_rect)
-    screen.blit(battle_item, item_rect)
-    screen.blit(battle_flee, flee_rect)
-
-    pygame.display.flip()
 
 # Game loop
 running = True
@@ -405,13 +446,9 @@ while running:
         if GAME_STATE == STATE_EXPLORE:
                 explore_event_handling(event)
         elif GAME_STATE == STATE_BATTLE:
-                if battle is None:
-                    battle = BattleSystem(player, enemy1)
-
                 battle_event_handling(event, battle)
                 
     if GAME_STATE == STATE_EXPLORE:
-        battle = None
         explore_state()
 
     elif GAME_STATE == STATE_BATTLE:
