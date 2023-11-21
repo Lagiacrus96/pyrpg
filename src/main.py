@@ -98,6 +98,9 @@ class Character(GameEntity):
         """
         self.experience = experience
         super().__init__(xpos, ypos, max_health, colour)
+    
+    def level_up(self):
+        pass #TODO
 
 
 class Enemy(GameEntity):
@@ -161,9 +164,9 @@ class BattleSystem:
         roll = random.randint(1,100)
         if roll <= crit_chance:
             print("You did a critical hit!")
-            player_damage = 2
+            player_damage = 15
         else:
-            player_damage = 1
+            player_damage = 10
         self.enemy.current_health -= player_damage
 
     def player_ability(self):
@@ -171,7 +174,7 @@ class BattleSystem:
         The method that determines what happens when a player chooses an ability.
         """
         print("You used all your strength!") #TODO
-        player_damage = 2
+        player_damage = 20
         self.enemy.current_health -= player_damage
 
     def player_item(self):
@@ -179,7 +182,10 @@ class BattleSystem:
         The method that determines what happens when a player chooses an item.
         """
         print("You healed!") #TODO
-        self.player.current_health += 3
+        if self.player.current_health + 30 > self.player.max_health:
+            self.player.current_health = self.player.max_health
+        else:
+            self.player.current_health += 30
 
 
     def player_flee(self):
@@ -223,9 +229,9 @@ class BattleSystem:
         roll = random.randint(1,100)
         if roll <= crit_chance:
             print("The enemy critically hit you!")
-            enemy_damage = 2
+            enemy_damage = 15
         else:
-            enemy_damage = 1
+            enemy_damage = 10
         self.player.current_health -= enemy_damage
     
     def check_end_conditions(self):
@@ -262,12 +268,12 @@ class BattleUI:
         pygame.draw.rect(screen, (40, 0, 0), (0, 0, screen_width, battleui_y))
     
     def draw_player_stats(self):
-        player_health_text = self.font.render("Player health: " + str(player.current_health), True, (255, 255, 255))
+        player_health_text = self.font.render("Player health: " + str(self.player.current_health) + " / " + str(self.player.max_health), True, (255, 255, 255))
         player_health_rect = player_health_text.get_rect(center = (screen_width * 1 // 5, screen_height * 6 // 7))
         screen.blit(player_health_text, player_health_rect)
     
     def draw_enemy_stats(self):
-        enemy_health_text = self.font.render("Enemy health: " + str(self.enemy.current_health), True, (255, 255, 255))
+        enemy_health_text = self.font.render("Enemy health: " + str(self.enemy.current_health) + " / " + str(self.enemy.max_health), True, (255, 255, 255))
         enemy_health_rect = enemy_health_text.get_rect(center = (screen_width * 4 // 5, screen_height *6 // 7))
         screen.blit(enemy_health_text, enemy_health_rect)
 
@@ -298,7 +304,7 @@ class BattleUI:
 
 # Player settings
 start_pos = [GRID_WIDTH // 2, GRID_HEIGHT // 2] # Starting position in grid terms
-player = Character(start_pos[0], start_pos[1], 9, 1, 0, [0, 0, 255])
+player = Character(start_pos[0], start_pos[1], 100, 1, 0, [0, 0, 255])
 
 def global_event_handling(event):
     """
@@ -319,7 +325,7 @@ def encounter():
         global GAME_STATE, enemy1, battle, player, remember_pos, battle_ui, screen
         remember_pos = player.pos
         player.pos = [GRID_WIDTH // 5, GRID_HEIGHT // 3]
-        enemy1 = Enemy(4 * GRID_WIDTH // 5, GRID_HEIGHT // 3, 3, [255, 0, 0])
+        enemy1 = Enemy(4 * GRID_WIDTH // 5, GRID_HEIGHT // 3, 50, [255, 0, 0])
         battle = BattleSystem(player, enemy1)
         battle_ui = BattleUI(player, enemy1, screen)
         GAME_STATE = STATE_BATTLE
