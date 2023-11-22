@@ -182,6 +182,7 @@ class BattleSystem:
         """
         The method that determines what happens when a player chooses an item.
         """
+        inventory_open = True
         pass #TODO
 
 
