@@ -240,6 +240,9 @@ class BattleSystem:
             print("you lost")
         elif self.enemy.current_health <= 0:
             print("You win!")
+            player_inventory["Gold"] += 10
+            player_inventory["Bronze Sword"] = 1
+            player_inventory["Potion"] = 1
         else:
             return
         battle_end()
