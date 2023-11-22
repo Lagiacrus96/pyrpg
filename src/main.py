@@ -40,7 +40,8 @@ w_pressed, a_pressed, s_pressed, d_pressed = False, False, False, False
 STATE_EXPLORE = "exploration"
 STATE_BATTLE = "battle"
 GAME_STATE = STATE_EXPLORE
-player_inventory = {"gold": 0}
+player_inventory = {"Gold": 0}
+inventory_open = False
 
 class GameEntity:
     """
@@ -181,11 +182,7 @@ class BattleSystem:
         """
         The method that determines what happens when a player chooses an item.
         """
-        print("You healed!") #TODO
-        if self.player.current_health + 30 > self.player.max_health:
-            self.player.current_health = self.player.max_health
-        else:
-            self.player.current_health += 30
+        pass #TODO
 
 
     def player_flee(self):
@@ -197,7 +194,7 @@ class BattleSystem:
         battle_end()
     
     def player_turn(self):
-        global GAME_STATE, battle
+        global GAME_STATE, battle, inventory_open
         
         if self.current_action == None:
             return
@@ -210,6 +207,9 @@ class BattleSystem:
 
         elif self.current_action == "item":
             self.player_item()
+            if inventory_open == False:
+                inventory_open = True
+
 
         elif self.current_action == "flee":
             self.player_flee()
@@ -305,6 +305,13 @@ class BattleUI:
             pygame.draw.rect(screen, (0, 0, 255), flee_rect)
         screen.blit(battle_flee, flee_rect)
 
+    def draw_item_menu(self):
+        potion_text = self.font.render("Potion", True, (255, 255, 255))
+        potion_rect = potion_text.get_rect(center = (screen_width // 2, screen_height * 6 // 7 - 90))
+        if selected_option == 0:
+            pygame.draw.rect(screen, (0, 0, 255), potion_rect)
+        screen.blit(potion_text, potion_rect)
+
 # Player settings
 start_pos = [GRID_WIDTH // 2, GRID_HEIGHT // 2] # Starting position in grid terms
 player = Character(start_pos[0], start_pos[1], 100, 1, 0, [0, 0, 255])
@@ -367,22 +374,35 @@ def explore_event_handling(event):
             s_pressed = False
 
 def battle_event_handling(event, battle_system):
-    global selected_option, running, GAME_STATE, current_time, a_pressed, d_pressed, w_pressed, s_pressed, player, enemy1
+    global selected_option, running, GAME_STATE, current_time, a_pressed, d_pressed, w_pressed, s_pressed, player, enemy1, inventory_open
 
     # Menu event handling
-    menu_options = {
-        0: "attack",
-        1: "ability",
-        2: "item",
-        3: "flee"
-    }
-    if event.type == pygame.KEYDOWN:
-        if event.key == pygame.K_UP:
-            selected_option = (selected_option - 1) % 4
-        elif event.key == pygame.K_DOWN:
-            selected_option = (selected_option + 1) % 4
-        elif event.key == pygame.K_RETURN:
-            battle_system.current_action = menu_options[selected_option]
+    if inventory_open == False:
+        menu_options = {
+            0: "attack",
+            1: "ability",
+            2: "item",
+            3: "flee"
+        }
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                selected_option = (selected_option - 1) % 4
+            elif event.key == pygame.K_DOWN:
+                selected_option = (selected_option + 1) % 4
+            elif event.key == pygame.K_RETURN:
+                    battle_system.current_action = menu_options[selected_option]
+    else:
+        menu_options = {
+            0: "potion"
+        }
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                selected_option = (selected_option - 1) % 1
+            elif event.key == pygame.K_DOWN:
+                selected_option = (selected_option + 1) % 1
+            elif event.key == pygame.K_RETURN:
+                    battle_system.current_action = menu_options[selected_option]
+                    inventory_open = False
 
 def explore_state():
     global last_move_time, player, current_time
@@ -425,7 +445,11 @@ def battle_state():
     enemy1.draw(screen)
     battle_ui.draw_player_stats()
     battle_ui.draw_enemy_stats()
-    battle_ui.draw_battle_menu()
+
+    if inventory_open == True:
+        battle_ui.draw_item_menu()
+    else:
+        battle_ui.draw_battle_menu()
 
 def reset_movement_states():
     global w_pressed, a_pressed, s_pressed, d_pressed
