@@ -32,7 +32,6 @@ last_move_time = pygame.time.get_ticks()
 battle_delay = 500
 #last_battle_time = pygame.time.get_ticks()
 
-
 # Default movement states
 w_pressed, a_pressed, s_pressed, d_pressed = False, False, False, False
 
@@ -41,7 +40,8 @@ STATE_EXPLORE = "exploration"
 STATE_BATTLE = "battle"
 GAME_STATE = STATE_EXPLORE
 player_inventory = {"Gold": 0}
-inventory_open = False
+explore_inventory_open = False
+battle_inventory_open = False
 
 class GameEntity:
     """
@@ -102,7 +102,6 @@ class Character(GameEntity):
     
     def level_up(self):
         pass #TODO
-
 
 class Enemy(GameEntity):
     """
@@ -195,7 +194,7 @@ class BattleSystem:
         battle_end()
     
     def player_turn(self):
-        global GAME_STATE, battle, inventory_open
+        global GAME_STATE, battle, battle_inventory_open
         
         if self.current_action == None:
             return
@@ -208,8 +207,8 @@ class BattleSystem:
 
         elif self.current_action == "item":
             self.player_item()
-            if inventory_open == False:
-                inventory_open = True
+            if battle_inventory_open == False:
+                battle_inventory_open = True
 
 
         elif self.current_action == "flee":
@@ -247,6 +246,23 @@ class BattleSystem:
         else:
             return
         battle_end()
+
+def draw_inventory(screen, player_inventory, explore_inventory_open):
+
+    if not explore_inventory_open:
+        return
+    print("Drawing inventory")
+    inventory_surface = pygame.Surface((300, 400))
+    inventory_surface.fill((20, 20, 20))
+    y = 10
+    font = pygame.font.Font(None, 65)
+    for item, quantity in player_inventory.items():
+        text = f"{item}: {quantity}"
+        item_surface = font.render(text, True, (255, 255, 255))
+        inventory_surface.blit(item_surface, (10, y))
+        y += 30
+    
+    screen.blit(inventory_surface, (100, 100))
         
 class BattleUI:
     global screen
@@ -341,7 +357,6 @@ def encounter():
         battle_ui = BattleUI(player, enemy1, screen)
         GAME_STATE = STATE_BATTLE
 
-
 def explore_event_handling(event):
     """
     A function to handle specifically the events that only occur whilst not in battle.
@@ -349,7 +364,7 @@ def explore_event_handling(event):
     Args:
         event (?):
     """
-    global running, GAME_STATE, current_time, a_pressed, d_pressed, w_pressed, s_pressed, player, enemy1
+    global running, GAME_STATE, current_time, a_pressed, d_pressed, w_pressed, s_pressed, player, enemy1, explore_inventory_open
 
 
     # Movement handling
@@ -373,12 +388,16 @@ def explore_event_handling(event):
             w_pressed = False
         if event.key == pygame.K_s or event.key == pygame.K_DOWN:
             s_pressed = False
+    
+    if event.type == pygame.KEYDOWN:
+        if event.key == pygame.K_SPACE:
+            explore_inventory_open = not explore_inventory_open
 
 def battle_event_handling(event, battle_system):
-    global selected_option, running, GAME_STATE, current_time, a_pressed, d_pressed, w_pressed, s_pressed, player, enemy1, inventory_open
+    global selected_option, running, GAME_STATE, current_time, a_pressed, d_pressed, w_pressed, s_pressed, player, enemy1, battle_inventory_open
 
     # Menu event handling
-    if inventory_open == False:
+    if battle_inventory_open == False:
         menu_options = {
             0: "attack",
             1: "ability",
@@ -403,11 +422,12 @@ def battle_event_handling(event, battle_system):
                 selected_option = (selected_option + 1) % 1
             elif event.key == pygame.K_RETURN:
                     battle_system.current_action = menu_options[selected_option]
-                    inventory_open = False
+                    battle_inventory_open = False
 
 def explore_state():
     global last_move_time, player, current_time
     encounter_occur = random.randint(1, 100)
+    draw_inventory(screen, player_inventory, explore_inventory_open)
 
     if current_time - last_move_time > move_delay:
         if w_pressed and player.pos[1] > 0:
@@ -447,7 +467,7 @@ def battle_state():
     battle_ui.draw_player_stats()
     battle_ui.draw_enemy_stats()
 
-    if inventory_open == True:
+    if battle_inventory_open == True:
         battle_ui.draw_item_menu()
     else:
         battle_ui.draw_battle_menu()
@@ -465,8 +485,6 @@ def battle_end():
     battle = None
     enemy1 = None
     encounter_occur = 0
-
-
 
 
 # Game loop
