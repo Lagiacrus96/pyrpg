@@ -1,4 +1,5 @@
 import pygame
+from pytmx import load_pygame
 import random
 
 pygame.init()
@@ -16,8 +17,8 @@ screen = pygame.display.set_mode((screen_width, screen_height))
 
 # Grid settings
 TILESIZE = 16 # Size of one tile is 40 pixels
-SCALE_FACTOR = 3
-SCALE_TILESIZE = TILESIZE * SCALE_FACTOR
+SCALE_FACTOR = 3 # Scale factor for the grid
+SCALE_TILESIZE = TILESIZE * SCALE_FACTOR 
 GRID_WIDTH = screen.get_width() // SCALE_TILESIZE
 GRID_HEIGHT = screen.get_height() // SCALE_TILESIZE
 
@@ -42,6 +43,28 @@ GAME_STATE = STATE_EXPLORE
 player_inventory = {"Gold": 0}
 explore_inventory_open = False
 battle_inventory_open = False
+
+tmx_data = load_pygame("../assets/map.tmx")
+
+character_image = pygame.image.load("../assets/mainchar.png").convert_alpha()
+character_image = pygame.transform.scale(character_image, (SCALE_TILESIZE, SCALE_TILESIZE))
+
+goblin_image = pygame.image.load("../assets/goblin.png").convert_alpha()
+goblin_image = pygame.transform.scale(goblin_image, (SCALE_TILESIZE, SCALE_TILESIZE))
+flipped_goblin_image = pygame.transform.flip(goblin_image, True, False)
+
+tree_image = pygame.image.load("../assets/tree.png").convert_alpha()
+tree_image = pygame.transform.scale(tree_image, (SCALE_TILESIZE, SCALE_TILESIZE))
+
+def draw_map(surface, tmx_data):
+    for layer in tmx_data.visible_layers:
+        for x, y, gid, in layer:
+            tile = tmx_data.get_tile_image_by_gid(gid)
+            if tile:
+
+                tile_width, tile_height = tile.get_size()
+                scaled_tile = pygame.transform.scale(tile, (tile_width * SCALE_FACTOR, tile_height * SCALE_FACTOR))
+                surface.blit(scaled_tile, (x * tile_width * SCALE_FACTOR, y * tile_height * SCALE_FACTOR))
 
 class GameEntity:
     """
@@ -70,7 +93,6 @@ class GameEntity:
         self.current_health = max_health
         self.colour = colour
 
-
     def draw(self, surface):
         """
         Draws the entity as a rectangle onto the given surface.
@@ -79,6 +101,15 @@ class GameEntity:
             surface (pygame.Surface): The surface on which to draw the entity.
         """
         pygame.draw.rect(surface, self.colour, (self.pos[0] * SCALE_TILESIZE, self.pos[1] * SCALE_TILESIZE, SCALE_TILESIZE, SCALE_TILESIZE))
+
+    def draw_char(self, surface, image):
+        """
+        Draws the entity as a character onto the given surface.
+
+        Args:
+            surface (pygame.Surface): The surface on which to draw the entity.
+        """
+        surface.blit(image, (self.pos[0] * SCALE_TILESIZE, self.pos[1] * SCALE_TILESIZE))
 
 class Character(GameEntity):
     """
@@ -184,7 +215,6 @@ class BattleSystem:
         inventory_open = True
         pass #TODO
 
-
     def player_flee(self):
         global battle, GAME_STATE
         """
@@ -217,12 +247,10 @@ class BattleSystem:
         self.current_action = None
         self.is_player_turn = False
 
-
     def enemy_turn(self):
         self.enemy_attack()
         self.is_player_turn = True
 
-    
     def enemy_attack(self):
         print("The enemy attacked!") #TODO
         crit_chance = 5
@@ -247,15 +275,19 @@ class BattleSystem:
             return
         battle_end()
 
-def draw_inventory(screen, player_inventory, explore_inventory_open):
-
+def draw_inventory(player_inventory, explore_inventory_open):
+    global screen
     if not explore_inventory_open:
         return
     print("Drawing inventory")
-    inventory_surface = pygame.Surface((300, 400))
+    inventory_surface = pygame.Surface((300, 300))
     inventory_surface.fill((20, 20, 20))
-    y = 10
-    font = pygame.font.Font(None, 65)
+    font = pygame.font.Font(None, 35)
+    text = "Inventory"
+    inventory_title = font.render(text, True, (255, 255, 255))
+    inventory_surface.blit(inventory_title, (100, 10))
+
+    y = 40
     for item, quantity in player_inventory.items():
         text = f"{item}: {quantity}"
         item_surface = font.render(text, True, (255, 255, 255))
@@ -329,10 +361,6 @@ class BattleUI:
             pygame.draw.rect(screen, (0, 0, 255), potion_rect)
         screen.blit(potion_text, potion_rect)
 
-# Player settings
-start_pos = [GRID_WIDTH // 2, GRID_HEIGHT // 2] # Starting position in grid terms
-player = Character(start_pos[0], start_pos[1], 100, 1, 0, [0, 0, 255])
-
 def global_event_handling(event):
     """
     A function to handle the events that can occur both inside and outside of battles
@@ -378,6 +406,9 @@ def explore_event_handling(event):
         if event.key == pygame.K_s or event.key == pygame.K_DOWN:
             s_pressed = True
         
+        if event.key == pygame.K_SPACE:
+            explore_inventory_open = not explore_inventory_open
+
     if event.type == pygame.KEYUP:
         # Movement handling
         if event.key == pygame.K_a or event.key == pygame.K_LEFT:
@@ -389,10 +420,6 @@ def explore_event_handling(event):
         if event.key == pygame.K_s or event.key == pygame.K_DOWN:
             s_pressed = False
     
-    if event.type == pygame.KEYDOWN:
-        if event.key == pygame.K_SPACE:
-            explore_inventory_open = not explore_inventory_open
-
 def battle_event_handling(event, battle_system):
     global selected_option, running, GAME_STATE, current_time, a_pressed, d_pressed, w_pressed, s_pressed, player, enemy1, battle_inventory_open
 
@@ -427,7 +454,6 @@ def battle_event_handling(event, battle_system):
 def explore_state():
     global last_move_time, player, current_time
     encounter_occur = random.randint(1, 100)
-    draw_inventory(screen, player_inventory, explore_inventory_open)
 
     if current_time - last_move_time > move_delay:
         if w_pressed and player.pos[1] > 0:
@@ -456,14 +482,16 @@ def explore_state():
     screen.fill((0, 70, 0))
 
     # Draw player
-    player.draw(screen)
+    player.draw_char(screen, character_image)
+    draw_map(screen, tmx_data)
+    draw_inventory(player_inventory, explore_inventory_open)
 
 def battle_state():
     global player, GAME_STATE, remember_pos, battle_ui
 
     battle_ui.draw_background()
-    player.draw(screen)
-    enemy1.draw(screen)
+    player.draw_char(screen, character_image)
+    enemy1.draw_char(screen, flipped_goblin_image)
     battle_ui.draw_player_stats()
     battle_ui.draw_enemy_stats()
 
@@ -486,6 +514,9 @@ def battle_end():
     enemy1 = None
     encounter_occur = 0
 
+# Player settings
+start_pos = [GRID_WIDTH // 2, GRID_HEIGHT // 2] # Starting position in grid terms
+player = Character(start_pos[0], start_pos[1], 100, 1, 0, [0, 0, 255])
 
 # Game loop
 running = True
